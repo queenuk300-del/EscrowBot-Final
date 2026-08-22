@@ -24,16 +24,16 @@ user_data = {}
 @bot.message_handler(commands=['start'])
 def start(message):
     welcome_text = (
-        f"👋 Welcome, {message.from_user.first_name}!\n\n"
-        "🛡 **Welcome to the Most Secure Escrow.** We hold funds safely for both buyers and sellers. "
-        "Over 50,000 successful trades.\n\n"
-        "Please choose an option below to proceed:"
+        f"🛡 **Welcome to Official Escrow Service, {message.from_user.first_name}!**\n\n"
+        "The most trusted and secure platform for buyers and sellers worldwide. "
+        "We protect your funds until all trade terms are 100% fulfilled.\n\n"
+        "👇 **Please select an option below to get started:**"
     )
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("🤝 Create New Deal", callback_data="create_deal"))
     markup.add(InlineKeyboardButton("💰 Deposit Funds (Crypto)", callback_data="deposit"))
-    markup.add(InlineKeyboardButton("❓ Rules & FAQ", callback_data="rules"))
-    markup.add(InlineKeyboardButton("📞 Support", url="https://t.me/Scurepaymentescrow_Official"))
+    markup.add(InlineKeyboardButton("📖 Terms & FAQ", callback_data="rules"))
+    markup.add(InlineKeyboardButton("📞 Official Support", url="https://t.me/Scurepaymentescrow_Official"))
     
     bot.send_message(message.chat.id, welcome_text, reply_markup=markup, parse_mode="Markdown")
 
@@ -41,22 +41,50 @@ def start(message):
 def callback_query(call):
     if call.data == "deposit":
         text = (
-            f"💰 **Deposit Funds via Crypto (USDT/TRC20)**\n\n"
-            f"Send your funds securely to the official deposit address below:\n\n"
+            f"💰 **Secure Deposit Gateway (USDT - TRC20)**\n\n"
+            f"Transfer your funds securely to our official verified escrow address below:\n\n"
             f"`{DEPOSIT_ADDRESS}`\n\n"
-            f"⚠️ *Note:* Send only TRC20 tokens. After transferring, send the screenshot (Payment Proof) here."
+            f"⚠️ **Important Notice:** Send ONLY TRC20 network tokens. After completing the transfer, please send the transaction screenshot/receipt here for verification."
         )
         markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("🔙 Back to Menu", callback_data="main_menu"))
+        markup.add(InlineKeyboardButton("🔙 Main Menu", callback_data="main_menu"))
         bot.edit_message_text(text=text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode="Markdown")
         
     elif call.data == "create_deal":
-        bot.send_message(call.message.chat.id, "Please type /trade to start a secure deal.")
-        
-    elif call.data == "rules":
-        rules_text = "📖 **Escrow Rules & Guidelines**\n\n1. Verify bot username.\n2. Funds locked until terms fulfilled.\n3. Contact support for disputes."
+        # 🌟 PROFESSIONAL TERMS & CONDITIONS CHECK BEFORE DEAL 🌟
+        terms_text = (
+            "⚖️ **Escrow Terms & Conditions (Agreement)**\n\n"
+            "Before proceeding with a secure deal, both parties must acknowledge our core policies:\n\n"
+            "1️⃣ **Fund Locking:** Funds sent to our escrow address remain safely locked until both buyer and seller confirm completion.\n"
+            "2️⃣ **Service Fee:** A standard **2% transparent fee** is applicable on total trade value upon successful settlement.\n"
+            "3️⃣ **Dispute Resolution:** In case of a dispute, our administration team holds the final authority based on valid proofs.\n"
+            "4️⃣ **Zero Tolerance for Fraud:** Fake transaction proofs will result in an immediate permanent ban.\n\n"
+            "By clicking 'I Agree', you accept all terms and conditions above."
+        )
         markup = InlineKeyboardMarkup()
-        markup.add(InlineKeyboardButton("🔙 Back to Menu", callback_data="main_menu"))
+        markup.add(InlineKeyboardButton("✅ I Agree & Proceed", callback_data="agree_terms"))
+        markup.add(InlineKeyboardButton("❌ Cancel", callback_data="main_menu"))
+        bot.edit_message_text(text=terms_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode="Markdown")
+
+    elif call.data == "agree_terms":
+        bot.edit_message_text(
+            text="🤝 **Deal Initiated Successfully!**\n\nPlease reply to this chat with the **Counterparty Username** and **Your Role** (e.g., `@username, Buyer` or `@username, Seller`).",
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            parse_mode="Markdown"
+        )
+        bot.register_next_step_handler(call.message, process_trade_details)
+
+    elif call.data == "rules":
+        rules_text = (
+            "📖 **Comprehensive Escrow Guidelines & FAQ**\n\n"
+            "🔒 **1. 100% Secure Holding:** Funds are kept in isolated offline multi-sig wallets.\n\n"
+            "⚖️ **2. Dispute Policy:** Unresolved issues are investigated within 24 hours by senior staff.\n\n"
+            "💰 **3. Transparent Pricing:** Only 2% fee deducted upon completion. No hidden charges.\n\n"
+            "🚫 **4. Security Warning:** Staff will never message you first for funds. Always verify official usernames."
+        )
+        markup = InlineKeyboardMarkup()
+        markup.add(InlineKeyboardButton("🔙 Main Menu", callback_data="main_menu"))
         bot.edit_message_text(text=rules_text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode="Markdown")
 
     elif call.data == "main_menu":
@@ -64,21 +92,27 @@ def callback_query(call):
 
 @bot.message_handler(commands=['trade'])
 def trade_command(message):
-    bot.send_message(message.chat.id, "🤝 Please send the Counterparty details (Username) and your Role (Buyer/Seller):")
-    bot.register_next_step_handler(message, process_trade_details)
+    terms_text = (
+        "⚖️ **Escrow Terms & Conditions (Agreement)**\n\n"
+        "1️⃣ **Fund Security:** Funds are securely held until terms are met.\n"
+        "2️⃣ **Platform Fee:** A standard **2% fee** applies upon completion.\n"
+        "3️⃣ **Disputes:** Admin decision is final in conflicts.\n\n"
+        "Click below to agree and start your trade:"
+    )
+    markup = InlineKeyboardMarkup()
+    markup.add(InlineKeyboardButton("✅ I Agree & Proceed", callback_data="agree_terms"))
+    bot.send_message(message.chat.id, terms_text, reply_markup=markup, parse_mode="Markdown")
 
 def process_trade_details(message):
     user_data[message.chat.id] = {'counterparty_details': message.text}
     
-    # 🌟 YAHAN MESSAGE PROFESSIONAL HO GAYA HAI 🌟
     payment_instructions = (
-        "✅ **Trade Details Saved Successfully!**\n\n"
-        "💳 **Payment Instructions:**\n"
-        "Please send your funds to our official secure escrow wallet address below:\n\n"
+        "✅ **Trade Parameters Registered!**\n\n"
+        "💳 **Official Escrow Deposit Address:**\n"
         f"`{DEPOSIT_ADDRESS}`\n\n"
-        "*(Network: USDT TRC20 ONLY)*\n\n"
-        "⚠️ **Escrow Fee:** Please note that a standard **2% fee** will be deducted from the total amount upon successful completion of the trade.\n\n"
-        "📸 **Next Step:** Once you have made the transfer, please send the **Screenshot or Document** of the transaction here as proof of payment."
+        "*(Network: USDT TRC20 Only)*\n\n"
+        "⚠️ **Fee Reminder:** A standard **2% fee** will be deducted upon successful trade execution.\n\n"
+        "📸 **Final Step:** Transfer the exact amount to the address above and send the **Payment Screenshot / Receipt** right here in chat."
     )
     bot.send_message(message.chat.id, payment_instructions, parse_mode="Markdown")
 
@@ -92,24 +126,25 @@ def handle_docs_photo(message):
     data = user_data.get(chat_id, {})
     counterparty = data.get('counterparty_details', 'Not Provided ❌')
     
-    bot.send_message(chat_id, "✅ Your payment proof and details have been sent to the admin. Please wait for verification.")
+    bot.send_message(chat_id, "✅ **Proof Received Successfully!**\nYour payment proof has been securely forwarded to our verification department. Please wait, an admin will review and update you shortly.")
     
     admin_notification = (
-        f"🚨 *New Escrow Deal & Payment Proof!*\n\n"
-        f"👤 *User:* {user.first_name} ({username})\n"
-        f"🆔 *User ID:* {user_id}\n"
-        f"🤝 *Counterparty Provided:* {counterparty}"
+        f"🚨 **NEW ESCROW PAYMENT PROOF SUBMITTED!** 🚨\n\n"
+        f"👤 **Client Name:** {user.first_name} ({username})\n"
+        f"🆔 **User ID:** `{user_id}`\n"
+        f"🤝 **Trade Details / Role:** {counterparty}\n\n"
+        f"📌 *Please verify the blockchain transaction hash against this receipt.*"
     )
     
     try:
         bot.send_message(ADMIN_ID, admin_notification, parse_mode='Markdown')
         bot.forward_message(ADMIN_ID, chat_id, message.message_id)
     except Exception as e:
-        bot.send_message(chat_id, "⚠️ Error sending to admin. Make sure you have started the bot from your admin account.")
+        bot.send_message(chat_id, "⚠️ Notice: Notification transmission error to administration.")
 
 @bot.message_handler(func=lambda message: True)
 def handle_all_messages(message):
-    bot.send_message(message.chat.id, "Please type /trade to start a secure deal.")
+    bot.send_message(message.chat.id, "Please type /start or /trade to initiate a secure transaction.")
 
 if __name__ == '__main__':
     threading.Thread(target=run_web, daemon=True).start()
