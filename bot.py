@@ -40,10 +40,6 @@ def increment_trades():
         f.write(str(current))
     return current
 
-@app.message_handler(commands=['start']) # Note: handled via bot handlers below
-def dummy():
-    pass
-
 @bot.message_handler(commands=['start'])
 def start(message):
     total_trades = get_total_trades()
@@ -194,20 +190,19 @@ def handle_docs_photo(message):
     admin_markup.add(InlineKeyboardButton("✅ Approve & Complete Deal", callback_data=f"approve_{chat_id}"))
     
     try:
-        # Forward or send photo with caption to admin
-        bot.send_photo(
-            ADMIN_ID, 
-            message.photo[-1].file_id, 
-            caption=admin_notification, 
-            reply_markup=admin_markup, 
-            parse_mode='Markdown'
-        )
-    except Exception as e:
-        try:
-            bot.send_message(ADMIN_ID, admin_notification + "\n\n(Document attached below)", parse_mode='Markdown')
+        if message.photo:
+            bot.send_photo(
+                ADMIN_ID, 
+                message.photo[-1].file_id, 
+                caption=admin_notification, 
+                reply_markup=admin_markup, 
+                parse_mode='Markdown'
+            )
+        else:
+            bot.send_message(ADMIN_ID, admin_notification + "\n\n(Document attached below)", reply_markup=admin_markup, parse_mode='Markdown')
             bot.forward_message(ADMIN_ID, chat_id, message.message_id)
-        except Exception as ex:
-            bot.send_message(chat_id, "⚠️ Notice: Notification transmission error to administration.")
+    except Exception as e:
+        bot.send_message(chat_id, "⚠️ Notice: Notification transmission error to administration.")
 
 @bot.message_handler(func=lambda message: True)
 def handle_all_messages(message):
@@ -217,4 +212,4 @@ if __name__ == '__main__':
     threading.Thread(target=run_web, daemon=True).start()
     print("Escrow Bot successfully running...")
     bot.infinity_polling()
-            
+    
