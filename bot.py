@@ -64,12 +64,23 @@ def callback_query(call):
 
 @bot.message_handler(commands=['trade'])
 def trade_command(message):
-    bot.send_message(message.chat.id, "🤝 Please send the Counterparty details (Username) and your Role:")
+    bot.send_message(message.chat.id, "🤝 Please send the Counterparty details (Username) and your Role (Buyer/Seller):")
     bot.register_next_step_handler(message, process_trade_details)
 
 def process_trade_details(message):
     user_data[message.chat.id] = {'counterparty_details': message.text}
-    bot.send_message(message.chat.id, "✅ Details saved! Now please send the screenshot/document as proof of payment.")
+    
+    # 🌟 YAHAN MESSAGE PROFESSIONAL HO GAYA HAI 🌟
+    payment_instructions = (
+        "✅ **Trade Details Saved Successfully!**\n\n"
+        "💳 **Payment Instructions:**\n"
+        "Please send your funds to our official secure escrow wallet address below:\n\n"
+        f"`{DEPOSIT_ADDRESS}`\n\n"
+        "*(Network: USDT TRC20 ONLY)*\n\n"
+        "⚠️ **Escrow Fee:** Please note that a standard **2% fee** will be deducted from the total amount upon successful completion of the trade.\n\n"
+        "📸 **Next Step:** Once you have made the transfer, please send the **Screenshot or Document** of the transaction here as proof of payment."
+    )
+    bot.send_message(message.chat.id, payment_instructions, parse_mode="Markdown")
 
 @bot.message_handler(content_types=['photo', 'document'])
 def handle_docs_photo(message):
@@ -104,4 +115,4 @@ if __name__ == '__main__':
     threading.Thread(target=run_web, daemon=True).start()
     print("Escrow Bot successfully running...")
     bot.infinity_polling()
-      
+    
