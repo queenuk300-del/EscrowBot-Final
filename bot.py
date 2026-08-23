@@ -185,7 +185,6 @@ def handle_docs_photo(message):
         f"📌 *Verify blockchain hash before clicking approve below:*"
     )
     
-    # Add an Approve button for Admin
     admin_markup = InlineKeyboardMarkup()
     admin_markup.add(InlineKeyboardButton("✅ Approve & Complete Deal", callback_data=f"approve_{chat_id}"))
     
